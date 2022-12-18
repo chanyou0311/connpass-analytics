@@ -1,0 +1,28 @@
+timezone: UTC
+
+schedule:
+  minutes_interval>: 1
+
+_export:
+  plugin:
+    repositories:
+      - https://jitpack.io
+    dependencies:
+      - com.github.takemikami:digdag-plugin-shresult:0.0.3
+
++read_keywords:
+  sh_result>: cat /app/project/keywords.conf
+  destination_variable: keywords
+  stdout_format: newline-delimited
+
++run:
+  for_each>:
+    keyword: ${keywords}
+  _parallel:
+    true
+  _do:
+    http>: http://embulk:8000/run
+    method: POST
+    content: ${keyword}
+    content_format: text
+    timeout: 60
