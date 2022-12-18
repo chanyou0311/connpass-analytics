@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  digdag:
+    build: ./digdag
+    ports:
+      - 65432:65432
+    depends_on:
+      - crawler
+      - embulk
+      - digdag_db
+    volumes:
+      - type: bind
+        source: ./datalake
+        target: /datalake
+      - type: bind
+        source: ./digdag/project/keywords.conf
+        target: /app/project/keywords.conf
+
+  crawler:
+    build: ./crawler
+    ports:
+      - 5000:8000
+    volumes:
+      - type: bind
+        source: ./datalake
+        target: /datalake
+
+  embulk:
+    build: ./embulk
+    ports:
+      - 3000:8000
+    depends_on:
+      - dwh
+    volumes:
+      - type: bind
+        source: ./datalake
+        target: /datalake
+      - type: volume
+        source: embulk_diff
+        target: /app/diffs
+
+  dwh:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=connpass
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  digdag_db:
+    image: postgres:15
+    ports:
+      - 5555:5432
+    environment:
+      - POSTGRES_DB=digdag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    command: postgres -c "max_connections=500"
+
+volumes:
+  embulk_diff:
