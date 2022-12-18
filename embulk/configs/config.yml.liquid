@@ -29,6 +29,7 @@ in:
       - { name: series_id, type: long, element_at: /series/id }
       - { name: series_title, type: string, element_at: /series/title }
       - { name: series_url, type: string, element_at: /series/url }
+      - { name: fetched_at, type: timestamp, format: "%FT%T%:z" }
     default_values:
       longCol: { type: "null" }
     charset: UTF-8
