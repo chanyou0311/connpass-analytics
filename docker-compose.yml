@@ -1,5 +1,46 @@
 version: "3"
 
+x-superset-user: &superset-user root
+x-superset-depends-on:
+  &superset-depends-on
+  - superset-cache
+  - superset-db
+x-superset-volumes:
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  &superset-volumes
+  - type: bind
+    source: ./superset/docker
+    target: /app/docker
+  - type: volume
+    source: superset_home
+    target: /app/superset_home
+
+x-superset-environment:
+  &superset-environment
+  COMPOSE_PROJECT_NAME: superset
+
+  # database configurations (do not modify)
+  DATABASE_DB: superset
+  DATABASE_HOST: superset-db
+  DATABASE_PASSWORD: superset
+  DATABASE_USER: superset
+
+  # database engine specific environment variables
+  # change the below if you prefers another database engine
+  DATABASE_PORT: 5432
+  DATABASE_DIALECT: postgresql
+
+  # Add the mapped in /app/pythonpath_docker which allows devs to override stuff
+  PYTHONPATH: /app/pythonpath:/app/docker/pythonpath_dev
+  REDIS_HOST: superset-cache
+  REDIS_PORT: 6379
+
+  FLASK_ENV: development
+  SUPERSET_ENV: development
+  SUPERSET_LOAD_EXAMPLES: yes
+  CYPRESS_CONFIG: false
+  SUPERSET_PORT: 8088
+
 services:
   digdag:
     build: ./digdag
@@ -20,7 +61,7 @@ services:
   crawler:
     build: ./crawler
     ports:
-      - 5000:8000
+      - 8000:8000
     volumes:
       - type: bind
         source: ./datalake
@@ -57,5 +98,55 @@ services:
       - POSTGRES_PASSWORD=postgres
     command: postgres -c "max_connections=500"
 
+  superset:
+    platform: linux/x86_64
+    image: apache/superset:latest
+    command: [ "/app/docker/docker-bootstrap.sh", "app" ]
+    ports:
+      - 8088:8088
+    user: *superset-user
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+    environment: *superset-environment
+
+  superset-init:
+    platform: linux/x86_64
+    image: apache/superset:latest
+    command: [ "/app/docker/docker-init.sh" ]
+    depends_on: *superset-depends-on
+    user: *superset-user
+    volumes: *superset-volumes
+    environment: *superset-environment
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    platform: linux/x86_64
+    image: apache/superset:latest
+    command: [ "/app/docker/docker-bootstrap.sh", "worker" ]
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: *superset-user
+    volumes: *superset-volumes
+    environment: *superset-environment
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery inspect ping -A superset.tasks.celery_app:app -d celery@$$HOSTNAME"
+        ]
+
+  superset-cache:
+    image: redis:7
+    restart: unless-stopped
+  superset-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=superset
+      - POSTGRES_USER=superset
+      - POSTGRES_PASSWORD=superset
+
 volumes:
   embulk_diff:
+  superset_home:
