@@ -8,7 +8,7 @@ services:
     depends_on:
       - crawler
       - embulk
-      - digdag_db
+      - digdag-db
     volumes:
       - type: bind
         source: ./datalake
@@ -49,10 +49,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
-  digdag_db:
+  digdag-db:
     image: postgres:15
-    ports:
-      - 5555:5432
     environment:
       - POSTGRES_DB=digdag
       - POSTGRES_USER=postgres
