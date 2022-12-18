@@ -1,0 +1,51 @@
+in:
+  type: file
+  path_prefix: /datalake/connpass/events/{{ env.keyword }}/events_
+  parser:
+    type: json
+    flatten_json_array: true
+    root: /events
+    columns:
+      - { name: event_id, type: long }
+      - { name: title, type: string }
+      - { name: catch, type: string }
+      - { name: description, type: string }
+      - { name: event_url, type: string }
+      - { name: started_at, type: timestamp, format: "%FT%T%:z" }
+      - { name: ended_at, type: timestamp, format: "%FT%T%:z" }
+      - { name: limit, type: long }
+      - { name: hash_tag, type: string }
+      - { name: event_type, type: string }
+      - { name: accepted, type: long }
+      - { name: waiting, type: long }
+      - { name: updated_at, type: timestamp, format: "%FT%T%:z" }
+      - { name: owner_id, type: long }
+      - { name: owner_nickname, type: string }
+      - { name: owner_display_name, type: string }
+      - { name: place, type: string }
+      - { name: address, type: string }
+      - { name: lat, type: double }
+      - { name: lon, type: double }
+      - { name: series_id, type: long, element_at: /series/id }
+      - { name: series_title, type: string, element_at: /series/title }
+      - { name: series_url, type: string, element_at: /series/url }
+    default_values:
+      longCol: { type: "null" }
+    charset: UTF-8
+    newline: LF
+filters:
+  - type: column
+    column: json_payload
+    add_columns:
+      - { name: keyword, type: string, default: "{{ env.keyword }}" }
+out:
+  {
+    type: postgresql,
+    host: dwh,
+    user: postgres,
+    password: postgres,
+    database: connpass,
+    table: events,
+    mode: insert,
+    driver_path: /tmp/postgresql-42.4.2.jar,
+  }
