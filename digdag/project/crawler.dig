@@ -1,7 +1,7 @@
 timezone: UTC
 
 schedule:
-  minutes_interval>: 1
+  cron>: '*/10 * * * *'
 
 _export:
   plugin:
